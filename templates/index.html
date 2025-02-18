@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English AI Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #chat-box {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .message {
+            margin: 5px 0;
+        }
+        .user {
+            font-weight: bold;
+            color: blue;
+        }
+        .ai {
+            font-weight: bold;
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+    <script>
+        async function sendMessage() {
+            let userInputElement = document.getElementById("user-input");
+            let chatBox = document.getElementById("chat-box");
+            let userMessage = userInputElement.value.trim();
+
+            if (userMessage === "") return; // 빈 입력 방지
+
+            // 사용자 메시지 추가
+            let userMsgElement = document.createElement("p");
+            userMsgElement.classList.add("message", "user");
+            userMsgElement.innerHTML = `<strong>You:</strong> ${userMessage}`;
+            chatBox.appendChild(userMsgElement);
+            userInputElement.value = ""; // 입력 필드 비우기
+
+            // 서버로 요청
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: userMessage })
+                });
+
+                const data = await response.json();
+
+                let aiMsgElement = document.createElement("p");
+                aiMsgElement.classList.add("message", "ai");
+
+                if (data.error) {
+                    aiMsgElement.innerHTML = `<span class="error">Error: ${data.error}</span>`;
+                } else {
+                    aiMsgElement.innerHTML = `<strong>AI:</strong> ${data.message}`;
+                }
+
+                chatBox.appendChild(aiMsgElement);
+            } catch (error) {
+                let errorMsgElement = document.createElement("p");
+                errorMsgElement.classList.add("message", "error");
+                errorMsgElement.innerText = "An error occurred. Please try again.";
+                chatBox.appendChild(errorMsgElement);
+            }
+
+            // 채팅 화면 자동 스크롤
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            let inputField = document.getElementById("user-input");
+
+            // Enter 키를 누르면 메시지 전송
+            inputField.addEventListener("keypress", function(event) {
+                if (event.key === "Enter") {
+                    event.preventDefault(); // 기본 동작 방지 (줄바꿈 방지)
+                    sendMessage();
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>English Conversation AI</h1>
+    <div id="chat-box"></div>
+    <input type="text" id="user-input" placeholder="Type your message..." />
+    <button onclick="sendMessage()">Send</button>
+</body>
+</html>

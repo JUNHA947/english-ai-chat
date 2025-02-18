@@ -1,22 +1,18 @@
-from flask import Flask, render_template, request, jsonify, session
-import openai
 import os
+from flask import Flask, render_template, request, jsonify
+import openai
 from dotenv import load_dotenv
 
 # 환경 변수 로드
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"  # 세션 암호화 키 설정 (아무 값이나 설정 가능)
 
-# OpenAI API 클라이언트 설정
+# OpenAI API 설정
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 @app.route("/")
 def index():
-    # 새로운 방문자라면 세션 초기화
-    if "chat_history" not in session:
-        session["chat_history"] = []
     return render_template("index.html")
 
 @app.route("/chat", methods=["POST"])
@@ -27,31 +23,17 @@ def chat():
         return jsonify({"error": "No input received"}), 400
 
     try:
-        # 세션에서 기존 대화 기록 가져오기
-        chat_history = session.get("chat_history", [])
-
-        # 새로운 메시지 추가
-        chat_history.append({"role": "user", "content": user_input})
-
-        # OpenAI API 호출 (이전 대화 포함)
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": "You are an AI English conversation partner."}] + chat_history
+            messages=[{"role": "system", "content": "You are an AI English conversation partner."},
+                      {"role": "user", "content": user_input}]
         )
-
         ai_message = response.choices[0].message.content
-
-        # AI 응답 저장
-        chat_history.append({"role": "assistant", "content": ai_message})
-
-        # 세션에 대화 기록 저장
-        session["chat_history"] = chat_history
-
         return jsonify({"message": ai_message})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# 🔥 Render에서 실행될 때 올바른 포트 사용
 if __name__ == "__main__":
-    app.run(debug=True)
-
-
+    port = int(os.environ.get("PORT", 5000))  # Render가 제공하는 포트 사용
+    app.run(host="0.0.0.0", port=port, debug=False)  # debug=False로 설정
